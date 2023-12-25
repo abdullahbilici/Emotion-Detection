@@ -10,7 +10,11 @@ for emotion in emotions:
     
     emo_img_dir = os.path.join(image_directory, emotion)
     emo_pro_dir = os.path.join(processed_directory, emotion)
-    os.makedirs(emo_pro_dir)
+
+    try:
+        os.makedirs(emo_pro_dir)
+    except:
+        pass
     
     for file_name in os.listdir(emo_img_dir):
 
