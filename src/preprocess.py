@@ -1,29 +1,38 @@
 from PIL import Image
+import numpy as np
 import os
 
-emotions = ["sad", "angry", "shocked", "happy"]
-
-image_directory = "data/images"
-processed_directory = "data/processed"
-
-for emotion in emotions:
+def preprocess():
+    emotions = ["sad", "angry", "shocked", "happy"]
     
-    emo_img_dir = os.path.join(image_directory, emotion)
-    emo_pro_dir = os.path.join(processed_directory, emotion)
+    X = list()
+    target = list()
+    image_directory = "data/images"
 
-    try:
-        os.makedirs(emo_pro_dir)
-    except:
-        pass
+    for i, emotion in enumerate(emotions):
+        
+        emotion_path = os.path.join(image_directory, emotion)
+
+        for file_name in os.listdir(emotion_path):
+
+            if file_name.endswith(".jpg") or file_name.endswith(".png"): 
+                image_path = os.path.join(emotion_path, file_name)
+                with Image.open(image_path) as img:
+                    gray_img = img.convert("L")
+                    resized_img = gray_img.resize((128, 128))
+                    resized_img = np.array(resized_img) / 255
+
+                    X.append(resized_img)
+                    target.append(i)
     
-    for file_name in os.listdir(emo_img_dir):
+    X = np.array(X)
+    target = np.array(target)
 
-        if file_name.endswith(".jpg") or file_name.endswith(".png"): 
-            image_path = os.path.join(emo_img_dir, file_name)
-            with Image.open(image_path) as img:
-                gray_img = img.convert("L")
-                resized_img = gray_img.resize((128, 128))
-                processed_path = os.path.join(emo_pro_dir, file_name)
-                resized_img.save(processed_path)
+    data_path = "data/data.npz"
+    np.savez(data_path, data=X, target=target)
 
-print("Image processing complete!")
+
+
+if __name__ == "__main__":
+    preprocess()
+
