@@ -7,9 +7,11 @@ image_directory = "data/images"
 processed_directory = "data/processed"
 
 for emotion in emotions:
+    
     emo_img_dir = os.path.join(image_directory, emotion)
     emo_pro_dir = os.path.join(processed_directory, emotion)
-
+    os.makedirs(emo_pro_dir)
+    
     for file_name in os.listdir(emo_img_dir):
 
         if file_name.endswith(".jpg") or file_name.endswith(".png"): 
