@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 def preprocess():
-    emotions = ["sad", "angry", "shocked", "happy"]
+    emotions = ["angry", "happy", "sad", "shocked"]
     
     X = list()
     target = list()
@@ -20,16 +20,14 @@ def preprocess():
                 with Image.open(image_path) as img:
                     gray_img = img.convert("L")
                     resized_img = gray_img.resize((128, 128))
-                    resized_img = np.array(resized_img) / 255
-
+                    resized_img = np.array(resized_img).flatten() / 255
+                    resized_img = np.append(resized_img, i)
                     X.append(resized_img)
-                    target.append(i)
-    
-    X = np.array(X)
-    target = np.array(target)
 
-    data_path = "data/data.npz"
-    np.savez(data_path, data=X, target=target)
+    X = np.array(X)
+
+    data_path = "data/data"
+    np.save(data_path, X)
 
 
 
