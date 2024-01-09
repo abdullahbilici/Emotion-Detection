@@ -3,9 +3,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+import random
 
 class DataLoader:
-    def __init__(self, data, shuffle = False, batch_size = 1, device = "cpu", shape = None):
+    def __init__(self, data, shuffle = False, batch_size = 1, device = "cpu", shape = None, transform=None):
 
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -24,6 +25,7 @@ class DataLoader:
         self.shape = tuple(self.X.shape)
         self.size = self.shape[0]
         
+        self.transform = transform
 
     def __iter__(self):
         if self.shuffle:
@@ -35,15 +37,6 @@ class DataLoader:
         return self
 
     def __next__(self):
-        # Check if batch sizeis 1 or not
-        if self.batch_size == 1:
-            
-            val = self[self.current_index]
-
-            self.current_index += 1
-            
-            return val
-
         # Check if we have reached the end of the data
         if self.current_index >= self.size:
             raise StopIteration
@@ -51,9 +44,25 @@ class DataLoader:
         # Get the batch
         batch_x, batch_y = self.X[self.current_index : self.current_index + self.batch_size], self.y[self.current_index : self.current_index + self.batch_size]
 
+
+        if self.transform:
+            transformed_batch_x = []
+            for x in batch_x:
+                # Reshape and convert x to uint8
+                x_reshaped = x.cpu().numpy().reshape(*self.shape[2:])
+                x_reshaped = (x_reshaped * 255).astype(np.uint8)  # Normalize and convert to uint8
+                transformed_x = self.transform(x_reshaped)
+                transformed_batch_x.append(transformed_x)
+
+            batch_x = torch.stack(transformed_batch_x)
+
         # Move the index to the next batch
         self.current_index += self.batch_size
 
+        # Check if batch sizeis 1 or not
+        if self.batch_size == 1:
+            batch_x, batch_y = batch_x.squeeze(0), batch_y.item()
+            
         return batch_x, batch_y
 
     def _shuffle_data(self):
@@ -122,5 +131,28 @@ def test_model(model, data_loader, criterion):
 
 
 
-def preprocess(frame, shape):
-    pass
+def visualize(data_path, grid_size=5, dimension = 128, ran = 1):
+    
+    data = np.load(data_path)
+    dimensions = (dimension, dimension)
+
+    emotion_dict = {0:"Angry", 1:"Happy", 2:"Sad", 3:"Shocked"}
+    
+    if ran == 1:
+        sampled_data = random.sample(list(data), grid_size ** 2)
+    else:
+        sampled_data = data[:grid_size ** 2]
+    
+    plt.figure(figsize=(12, 12))
+    for i, image_data in enumerate(sampled_data):
+        image = image_data[:-1]
+        label =image_data[-1]  
+        image = image.reshape(dimensions)
+        
+        plt.subplot(grid_size, grid_size, i + 1) 
+        plt.imshow(image, cmap = "gray")  
+        plt.title(emotion_dict[label])  
+        plt.axis("off")  
+
+    plt.tight_layout()
+    plt.show()
