@@ -6,7 +6,6 @@ def preprocess():
     emotions = ["angry", "happy", "sad", "shocked"]
     
     X = list()
-    target = list()
     image_directory = "data/images"
 
     for i, emotion in enumerate(emotions):
@@ -21,6 +20,8 @@ def preprocess():
                     gray_img = img.convert("L")
                     resized_img = gray_img.resize((128, 128))
                     resized_img = np.array(resized_img).flatten() / 255
+                    resized_img -= resized_img.mean()
+
                     resized_img = np.append(resized_img, i)
                     X.append(resized_img)
 
