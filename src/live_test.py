@@ -2,13 +2,13 @@ import cv2
 import torch
 import torchvision.transforms as transforms
 from model import *
-from PIL import Image
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 model = CNN128()
 model.to(DEVICE)
-model.load_state_dict(torch.load("model/model_1"))
+model.load_state_dict(torch.load("model/model"))
 model.eval()
 
 SHAPE = (128,128)
@@ -19,6 +19,7 @@ def preprocess(frame, shape, device):
     frame = cv2.resize(frame, shape)
 
     frame = torch.tensor(frame).to(device).view(1,1,*shape).float() / 255
+    frame -= frame.mean() - .1
 
     return frame
 
@@ -27,6 +28,7 @@ if __name__ == "__main__":
 
     while True:
         ret, frame = cap.read()
+        frame = cv2.flip(frame, 1)
 
         frame_shape = frame.shape[:-1]
 
@@ -45,6 +47,7 @@ if __name__ == "__main__":
 
 
         data = preprocess(croped, SHAPE, DEVICE)
+        print(data.mean())
 
         logits = model(data)
         prediction = torch.argmax(logits, axis = 1).item()

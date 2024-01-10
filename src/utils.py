@@ -3,11 +3,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-import random
 
 class DataLoader:
-    def __init__(self, data, shuffle = False, batch_size = 1, device = "cpu", shape = None, transform=None):
-
+    def __init__(self, data, shuffle = False, batch_size = 1, device = "cpu", shape = None, transforms=None):
+        self.device = device
         self.batch_size = batch_size
         self.shuffle = shuffle
 
@@ -17,17 +16,40 @@ class DataLoader:
         elif len(data) == 2:
             data = np.concatenate([data[0], data[1].reshape(-1,1)], axis = 1)
 
+        self.X = torch.tensor(data[:,:-1]).view(-1, 1, *shape)
+        self.y = torch.tensor(data[:,-1])
 
+        
 
-        self.X = torch.tensor(data[:,:-1]).to(device).view(-1, 1, *shape)
-        self.y = torch.tensor(data[:,-1]).to(device)
+        self.transforms = transforms
 
-        self.shape = tuple(self.X.shape)
+        self.augmented_data = self.X
+        self.augmented_y = self.y
+        if self.transforms:
+            for transform_ in self.transforms:
+                augmented_data = torch.stack([transform_(image).squeeze() for image in self.X]).view(-1, 1, *shape)
+                self.augmented_data = torch.cat([self.augmented_data, augmented_data], dim = 0)
+                self.augmented_y = torch.cat([self.augmented_y, self.y], dim = 0)
+
+        self.shape = tuple(self.augmented_data.shape)
         self.size = self.shape[0]
         
-        self.transform = transform
+    def _shuffle_data(self):
+        # Shuffle the data
+        order = np.random.permutation(self.size)
+        self.augmented_data = self.augmented_data[order]
+        self.augmented_y = self.augmented_y[order]
+
 
     def __iter__(self):
+        if self.transforms:
+            self.augmented_data = self.X
+            self.augmented_y = self.y
+            for transform in self.transforms:
+                augmented_data = torch.stack([transform(image).squeeze() for image in self.X]).view(-1, 1, *self.shape[2:])
+                self.augmented_data = torch.cat([self.augmented_data, augmented_data], dim = 0)
+                self.augmented_y = torch.cat([self.augmented_y, self.y], dim = 0)
+
         if self.shuffle:
             # Shuffle the data if True
             self._shuffle_data()
@@ -42,49 +64,40 @@ class DataLoader:
             raise StopIteration
 
         # Get the batch
-        batch_x, batch_y = self.X[self.current_index : self.current_index + self.batch_size], self.y[self.current_index : self.current_index + self.batch_size]
-
-
-        if self.transform:
-            transformed_batch_x = []
-            for x in batch_x:
-                # Reshape and convert x to uint8
-                x_reshaped = x.cpu().numpy().reshape(*self.shape[2:])
-                x_reshaped = (x_reshaped * 255).astype(np.uint8)  # Normalize and convert to uint8
-                transformed_x = self.transform(x_reshaped)
-                transformed_batch_x.append(transformed_x)
-
-            batch_x = torch.stack(transformed_batch_x)
+        batch_x, batch_y = self.augmented_data[self.current_index : self.current_index + self.batch_size], self.augmented_y[self.current_index : self.current_index + self.batch_size]
 
         # Move the index to the next batch
         self.current_index += self.batch_size
 
-        # Check if batch sizeis 1 or not
+        # Check if batch size is 1 or not
         if self.batch_size == 1:
             batch_x, batch_y = batch_x.squeeze(0), batch_y.item()
             
-        return batch_x, batch_y
-
-    def _shuffle_data(self):
-        # Shuffle the data
-        order = np.random.permutation(self.size)
-        self.X = self.X[order]
-        self.y = self.y[order]
+        return batch_x.to(self.device), batch_y.to(self.device)
 
     def __getitem__(self, inx: int):
         # If index is an integer
         if isinstance(inx, int):
             if inx < self.size:
-                return self.X[inx], self.y[inx]
+                return self.augmented_data[inx].to(self.device), self.augmented_y[inx].to(self.device)
             else:
                 raise IndexError
             
         # If index is a slice
         if isinstance(inx, slice):
             if inx.start < self.size:
-                return self.X[inx], self.y[inx]
+                return self.augmented_data[inx].to(self.device), self.augmented_y[inx].to(self.device)
             else:
                 raise IndexError
+            
+        try:
+            iter(inx)
+            if np.all(np.array(inx) < self.size):
+                return self.augmented_data[inx].to(self.device), self.augmented_y[inx].to(self.device)
+            else:
+                raise IndexError
+        except:
+            raise IndexError
             
     def __len__(self):
         return self.size
@@ -104,15 +117,15 @@ def colorize_accuracy(test_acc):
     return color_code
     
 
-def test_model(model, data_loader, criterion):
+def test_model(model, data_loader, criterion, device):
     model.eval()
-    predictions = model(data_loader.X.float())
+    predictions = model(data_loader.X.to(device).float())
     pred_class = torch.argmax(predictions, axis = 1)
 
 
     emotions = ["Angry", "Happy", "Sad", "Shocked"]
 
-    cm = confusion_matrix(data_loader.y.cpu(), pred_class.cpu())
+    cm = confusion_matrix(data_loader.y, pred_class.cpu())
 
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
@@ -124,34 +137,24 @@ def test_model(model, data_loader, criterion):
     plt.show()
 
     
-    acc = (pred_class == data_loader.y).float().mean()
-    loss = criterion(predictions, data_loader.y.long()).item() / data_loader.size
+    acc = (pred_class.cpu() == data_loader.y).float().mean()
+    loss = criterion(predictions, data_loader.y.to(device).long()).item() / data_loader.size
 
     print(f"Loss: {loss :.4f}, Accuracy = {acc:.4f}")
 
-
-
-def visualize(data_path, grid_size=5, dimension = 128, ran = 1):
+def visualize(dataset, grid_size=5, dimension = 128):
     
-    data = np.load(data_path)
     dimensions = (dimension, dimension)
 
     emotion_dict = {0:"Angry", 1:"Happy", 2:"Sad", 3:"Shocked"}
-    
-    if ran == 1:
-        sampled_data = random.sample(list(data), grid_size ** 2)
-    else:
-        sampled_data = data[:grid_size ** 2]
-    
+    indexes = np.random.choice(dataset.size, 25,replace=False)
     plt.figure(figsize=(12, 12))
-    for i, image_data in enumerate(sampled_data):
-        image = image_data[:-1]
-        label =image_data[-1]  
-        image = image.reshape(dimensions)
+    for i, (image_data, label) in enumerate(zip(dataset[indexes][0], dataset[indexes][1])):
+        image = image_data.view(dimensions).cpu()
         
         plt.subplot(grid_size, grid_size, i + 1) 
         plt.imshow(image, cmap = "gray")  
-        plt.title(emotion_dict[label])  
+        plt.title(emotion_dict[label.item()])  
         plt.axis("off")  
 
     plt.tight_layout()
