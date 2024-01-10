@@ -1,6 +1,5 @@
 import cv2
 import torch
-import torchvision.transforms as transforms
 from model import *
 
 
@@ -8,7 +7,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 model = CNN128()
 model.to(DEVICE)
-model.load_state_dict(torch.load("model/model"))
+model.load_state_dict(torch.load("model/model_1"))
 model.eval()
 
 SHAPE = (128,128)
@@ -47,7 +46,6 @@ if __name__ == "__main__":
 
 
         data = preprocess(croped, SHAPE, DEVICE)
-        print(data.mean())
 
         logits = model(data)
         prediction = torch.argmax(logits, axis = 1).item()

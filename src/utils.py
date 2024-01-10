@@ -22,11 +22,11 @@ class DataLoader:
         
 
         self.transforms = transforms
-
         self.augmented_data = self.X
         self.augmented_y = self.y
         if self.transforms:
-            for transform_ in self.transforms:
+            self.augmented_data = torch.stack([self.transforms[0](image).squeeze() for image in self.X]).view(-1, 1, *shape)
+            for transform_ in self.transforms[1:]:
                 augmented_data = torch.stack([transform_(image).squeeze() for image in self.X]).view(-1, 1, *shape)
                 self.augmented_data = torch.cat([self.augmented_data, augmented_data], dim = 0)
                 self.augmented_y = torch.cat([self.augmented_y, self.y], dim = 0)
@@ -43,9 +43,9 @@ class DataLoader:
 
     def __iter__(self):
         if self.transforms:
-            self.augmented_data = self.X
+            self.augmented_data = torch.stack([self.transforms[0](image).squeeze() for image in self.X]).view(-1, 1, *self.shape[2:])
             self.augmented_y = self.y
-            for transform in self.transforms:
+            for transform in self.transforms[1:]:
                 augmented_data = torch.stack([transform(image).squeeze() for image in self.X]).view(-1, 1, *self.shape[2:])
                 self.augmented_data = torch.cat([self.augmented_data, augmented_data], dim = 0)
                 self.augmented_y = torch.cat([self.augmented_y, self.y], dim = 0)

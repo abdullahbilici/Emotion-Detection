@@ -27,7 +27,7 @@ def preprocess():
 
     X = np.array(X)
 
-    data_path = "data/data"
+    data_path = "data/data_normalized"
     np.save(data_path, X)
 
 
