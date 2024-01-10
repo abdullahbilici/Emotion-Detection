@@ -7,7 +7,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 model = CNN128()
 model.to(DEVICE)
-model.load_state_dict(torch.load("model/model_1"))
+model.load_state_dict(torch.load("model/model_real"))
 model.eval()
 
 SHAPE = (128,128)

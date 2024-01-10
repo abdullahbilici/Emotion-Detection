@@ -16,7 +16,7 @@ class CNN128(nn.Module):
             nn.Conv2d(8, 16, kernel_size=5, padding=2),
             nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2, 2),
         )
 
         self.fc1 = nn.Linear(16 * 32 * 32, 64)
