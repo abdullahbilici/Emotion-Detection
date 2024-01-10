@@ -4,10 +4,19 @@ from model import *
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print(DEVICE)
 
+# Instantiate the model
 model = CNN128()
+
+# Load the state dictionary
+state_dict = torch.load('./model/combined_2135_8983', map_location=torch.device(DEVICE))
+model.load_state_dict(state_dict)
+
+# Move the model to the appropriate device
 model.to(DEVICE)
-model.load_state_dict(torch.load("model/model_real"))
+
+# Set the model to evaluation mode
 model.eval()
 
 SHAPE = (128,128)
@@ -18,8 +27,9 @@ def preprocess(frame, shape, device):
     frame = cv2.resize(frame, shape)
 
     frame = torch.tensor(frame).to(device).view(1,1,*shape).float() / 255
-    frame -= frame.mean()
-
+    
+    frame = (frame - 0.45) / 0.25
+    
     return frame
 
 if __name__ == "__main__":
