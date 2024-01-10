@@ -18,7 +18,7 @@ def preprocess(frame, shape, device):
     frame = cv2.resize(frame, shape)
 
     frame = torch.tensor(frame).to(device).view(1,1,*shape).float() / 255
-    frame -= frame.mean() - .1
+    frame -= frame.mean()
 
     return frame
 
