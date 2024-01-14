@@ -128,12 +128,12 @@ def test_model(model, data_loader, criterion, device):
     cm = confusion_matrix(data_loader.y, pred_class.cpu())
 
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False,
                 xticklabels=emotions,
                 yticklabels=emotions)
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.title('Confusion Matrix')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.title("Confusion Matrix")
     plt.show()
 
     
@@ -158,4 +158,16 @@ def visualize(dataset, grid_size=5, dimension = 128):
         plt.axis("off")  
 
     plt.tight_layout()
+    plt.show()
+
+def plot_loss(losses):
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(losses["train"], label="Training Loss")
+    plt.plot(losses["test"], label="Testing Loss")
+    plt.title("Training and Testing Loss Over Epochs")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.grid(True)
     plt.show()
