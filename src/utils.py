@@ -171,3 +171,4 @@ def plot_loss(losses):
     plt.legend()
     plt.grid(True)
     plt.show()
+    
